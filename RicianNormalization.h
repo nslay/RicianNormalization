@@ -177,7 +177,7 @@ private:
     // L_{1/2}(x) is a monotonically decreasing function. Let's use bisection method!
     //
 
-    // Calculate samle moments
+    // Calculate sample moments
     double u1 = 0.0, u2 = 0.0;
 
     const PixelType * const p_buffer = m_p_clImage->GetBufferPointer();
