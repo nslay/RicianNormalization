@@ -125,7 +125,7 @@ public:
 
       clTmp = RiceDistribution<double>::Pdf(clTmp, clNu, clSigma);
       if (clTmp.Value() > 0.0) // The 0 pdf pixels wouldn't contribute to the optimization anyway (pdf derivative is 0)
-        clLoss -= log(RiceDistribution<double>::Pdf(clTmp, clNu, clSigma));
+        clLoss -= log(clTmp);
     }
 
     clLoss /= (double)numPixels;
@@ -269,12 +269,18 @@ public:
   : m_nu(nu), m_sigma(sigma) { }
 
   static RealType Pdf(const RealType &x, const RealType &nu, const RealType &sigma) {
+    if (x < RealType(0))
+      return RealType(0);
+
     const RealType sigma2 = sigma*sigma; // Just to be concise...
     return x/sigma2 * std::exp(-(x*x + nu*nu)/(RealType(2)*sigma2)) * ModifiedBessel0(x*nu/sigma2);
   }
 
   template<unsigned int NumIndependents>
   static ADVar<RealType, NumIndependents> Pdf(const ADVar<RealType, NumIndependents> &x, const ADVar<RealType, NumIndependents> &nu, const ADVar<RealType, NumIndependents> &sigma) {
+    if (x.Value() < RealType(0))
+      return ADVar<RealType, NumIndependents>(RealType(0));
+
     const ADVar<RealType, NumIndependents> sigma2 = sigma*sigma;
     return x/sigma2 * exp(-(x*x + nu*nu)/(RealType(2)*sigma2)) * ModifiedBessel0(x*nu/sigma2);
   }
@@ -355,8 +361,8 @@ public:
     RealType sum = term; // First term is 0, second term is 1
 
     for (unsigned int k = 2; k < MaxTerms; ++k) {
-      term *= z/RealType(k*k);
-      sum += RealType(k)*term;
+      term *= z/RealType(k*(k-1));
+      sum += term;
     }
 
     sum *= x/RealType(2); // Chain rule x^2/4 --> x/2
