@@ -308,9 +308,6 @@ public:
   // http://mathworld.wolfram.com/ModifiedBesselFunctionoftheFirstKind.html
   // From (7):
   static RealType ModifiedBessel0(const RealType &x) {
-    if (x < RealType(0))
-      return std::numeric_limits<RealType>::quiet_NaN();
-
     if (x == RealType(0))
       return RealType(1);
 
@@ -348,9 +345,6 @@ public:
     // http://mathworld.wolfram.com/ChebyshevPolynomialoftheFirstKind.html
     // T_1(x) = x and hence T_1(d/dx) = d/dx
     // ModifiedBessel1(x) = d/dx ModifiedBessel0(x)
-
-    if (x < RealType(0))
-      return std::numeric_limits<RealType>::quiet_NaN();
 
     if (x == RealType(0))
       return RealType(0);
