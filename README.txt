@@ -96,8 +96,9 @@ WINDOWS TIP: Command Prompt can be launched conveniently in a folder
 holding shift and right clicking in the folder's window and selecting
 "Open command window here."
 
-RicianNormalization read in one input file or DICOM folder, normalize it
-and then write out an image file (e.g. Nifti or MetaIO) or DICOM series.
+RicianNormalization reads in one input file or DICOM folder, normalizes 
+it and then writes out the normalized image in an image file (e.g. Nifti 
+or MetaIO) or DICOM series.
 
 As a quickstart example:
 
