@@ -170,6 +170,8 @@ bool Normalize(const std::string &strImagePath, const std::string &strOutputPath
       return false;
     }
 
+    p_clImageIO->SetFileName(strImagePath);
+
     try {
       p_clImageIO->ReadImageInformation();
     }

@@ -46,7 +46,125 @@
 //
 
 template<typename RealType>
-class RiceDistribution;
+class RiceDistribution {
+  static constexpr unsigned int MaxTerms = 20; // Really, this is completely overkill for the values we will likely need... pessimistic napkin math confirms!
+public:
+  // OK, but not how to sample it...
+  RiceDistribution(const RealType &nu, const RealType &sigma)
+  : m_nu(nu), m_sigma(sigma) { }
+
+  static RealType Pdf(const RealType &x, const RealType &nu, const RealType &sigma) {
+    if (x < RealType(0))
+      return RealType(0);
+
+    const RealType sigma2 = sigma*sigma; // Just to be concise...
+    return x/sigma2 * std::exp(-(x*x + nu*nu)/(RealType(2)*sigma2)) * ModifiedBessel0(x*nu/sigma2);
+  }
+
+  template<unsigned int NumIndependents>
+  static ADVar<RealType, NumIndependents> Pdf(const ADVar<RealType, NumIndependents> &x, const ADVar<RealType, NumIndependents> &nu, const ADVar<RealType, NumIndependents> &sigma) {
+    if (x.Value() < RealType(0))
+      return ADVar<RealType, NumIndependents>(RealType(0));
+
+    const ADVar<RealType, NumIndependents> sigma2 = sigma*sigma;
+    return x/sigma2 * exp(-(x*x + nu*nu)/(RealType(2)*sigma2)) * ModifiedBessel0(x*nu/sigma2);
+  }
+
+  static RealType Mean(const RealType &nu, const RealType &sigma) {
+    return sigma*std::sqrt(RealType(M_PI_2))*HalfLaguerre(-std::pow(nu/sigma, 2)/RealType(2));
+  }
+
+  static RealType Variance(const RealType &nu, const RealType &sigma) {
+    return RealType(2)*sigma*sigma + nu*nu - 
+      RealType(M_PI_2)*std::pow(sigma*HalfLaguerre(-std::pow(nu/sigma, 2)/RealType(2)), 2);
+  }
+
+  const RealType & Nu() const { return m_nu; }
+  const RealType & Sigma() const { return m_sigma; }
+
+  RealType Pdf(const RealType &x) const { return Pdf(x, Nu(), Sigma()); }
+
+  // This doesn't seem quite useful but here for consistency...
+  template<unsigned int NumIndependents>
+  ADVar<RealType, NumIndependents> Pdf(const ADVar<RealType, NumIndependents> &x) const {
+    const ADVar<RealType, NumIndependents> clNu(Nu()), clSigma(Sigma());
+    return Pdf(x, clNu, clSigma);
+  }
+
+  RealType Mean() const { return Mean(Nu(), Sigma()); }
+  RealType Variance() const { return Variance(Nu(), Sigma()); }
+
+  // Don't use this junk outside of calculating the pdf!
+  //
+  // http://mathworld.wolfram.com/ModifiedBesselFunctionoftheFirstKind.html
+  // From (7):
+  static RealType ModifiedBessel0(const RealType &x) {
+    if (x == RealType(0))
+      return RealType(1);
+
+    // Let z = 1/4*x*x
+    const RealType z = x*x/RealType(4);
+    RealType term = RealType(1);
+    RealType sum = term; // First term is 1
+
+    for (unsigned int k = 1; k < MaxTerms; ++k) {
+      term *= z/RealType(k*k);
+      sum += term;
+    }
+
+    return sum;
+  }
+
+  template<unsigned int NumIndependents>
+  static ADVar<RealType, NumIndependents> ModifiedBessel0(const ADVar<RealType, NumIndependents> &x) {
+    ADVar<RealType, NumIndependents> y;
+
+    y.Value() = ModifiedBessel0(x.Value());
+
+    const RealType tmp = ModifiedBessel1(x.Value());
+
+    std::transform(x.Gradient().begin(), x.Gradient().end(), y.Gradient().begin(),
+      [&tmp](const RealType &dx) -> RealType {
+        return tmp*dx;
+      });
+
+    return y;
+  }
+
+  // From (6):
+  static RealType ModifiedBessel1(const RealType &x) {
+    // http://mathworld.wolfram.com/ChebyshevPolynomialoftheFirstKind.html
+    // T_1(x) = x and hence T_1(d/dx) = d/dx
+    // ModifiedBessel1(x) = d/dx ModifiedBessel0(x)
+
+    if (x == RealType(0))
+      return RealType(0);
+
+    // Let z = 1/4*x*x
+    const RealType z = x*x/RealType(4);
+    RealType term = RealType(1);
+    RealType sum = term; // First term is 0, second term is 1
+
+    for (unsigned int k = 2; k < MaxTerms; ++k) {
+      term *= z/RealType(k*(k-1));
+      sum += term;
+    }
+
+    sum *= x/RealType(2); // Chain rule x^2/4 --> x/2
+    
+    return sum;
+  }
+
+  // https://en.wikipedia.org/wiki/Rice_distribution
+  // From section "Moments"
+  static RealType HalfLaguerre(const RealType &x) {
+    return std::exp(x/RealType(2))*((RealType(1) - x)*ModifiedBessel0(-x/RealType(2)) - x*ModifiedBessel1(-x/RealType(2)));
+  }
+
+private:
+  RealType m_sigma;
+  RealType m_nu;
+};
 
 template<typename ImageType>
 class RicianNormalization : public vnl_cost_function {
@@ -258,127 +376,6 @@ private:
 
     return x;
   }
-};
-
-template<typename RealType>
-class RiceDistribution {
-  static constexpr unsigned int MaxTerms = 20; // Really, this is completely overkill for the values we will likely need... pessimistic napkin math confirms!
-public:
-  // OK, but not how to sample it...
-  RiceDistribution(const RealType &nu, const RealType &sigma)
-  : m_nu(nu), m_sigma(sigma) { }
-
-  static RealType Pdf(const RealType &x, const RealType &nu, const RealType &sigma) {
-    if (x < RealType(0))
-      return RealType(0);
-
-    const RealType sigma2 = sigma*sigma; // Just to be concise...
-    return x/sigma2 * std::exp(-(x*x + nu*nu)/(RealType(2)*sigma2)) * ModifiedBessel0(x*nu/sigma2);
-  }
-
-  template<unsigned int NumIndependents>
-  static ADVar<RealType, NumIndependents> Pdf(const ADVar<RealType, NumIndependents> &x, const ADVar<RealType, NumIndependents> &nu, const ADVar<RealType, NumIndependents> &sigma) {
-    if (x.Value() < RealType(0))
-      return ADVar<RealType, NumIndependents>(RealType(0));
-
-    const ADVar<RealType, NumIndependents> sigma2 = sigma*sigma;
-    return x/sigma2 * exp(-(x*x + nu*nu)/(RealType(2)*sigma2)) * ModifiedBessel0(x*nu/sigma2);
-  }
-
-  static RealType Mean(const RealType &nu, const RealType &sigma) {
-    return sigma*std::sqrt(RealType(M_PI_2))*HalfLaguerre(-std::pow(nu/sigma, 2)/RealType(2));
-  }
-
-  static RealType Variance(const RealType &nu, const RealType &sigma) {
-    return RealType(2)*sigma*sigma + nu*nu - 
-      RealType(M_PI_2)*std::pow(sigma*HalfLaguerre(-std::pow(nu/sigma, 2)/RealType(2)), 2);
-  }
-
-  const RealType & Nu() const { return m_nu; }
-  const RealType & Sigma() const { return m_sigma; }
-
-  RealType Pdf(const RealType &x) const { return Pdf(x, Nu(), Sigma()); }
-
-  // This doesn't seem quite useful but here for consistency...
-  template<unsigned int NumIndependents>
-  ADVar<RealType, NumIndependents> Pdf(const ADVar<RealType, NumIndependents> &x) const {
-    const ADVar<RealType, NumIndependents> clNu(Nu()), clSigma(Sigma());
-    return Pdf(x, clNu, clSigma);
-  }
-
-  RealType Mean() const { return Mean(Nu(), Sigma()); }
-  RealType Variance() const { return Variance(Nu(), Sigma()); }
-
-  // Don't use this junk outside of calculating the pdf!
-  //
-  // http://mathworld.wolfram.com/ModifiedBesselFunctionoftheFirstKind.html
-  // From (7):
-  static RealType ModifiedBessel0(const RealType &x) {
-    if (x == RealType(0))
-      return RealType(1);
-
-    // Let z = 1/4*x*x
-    const RealType z = x*x/RealType(4);
-    RealType term = RealType(1);
-    RealType sum = term; // First term is 1
-
-    for (unsigned int k = 1; k < MaxTerms; ++k) {
-      term *= z/RealType(k*k);
-      sum += term;
-    }
-
-    return sum;
-  }
-
-  template<unsigned int NumIndependents>
-  static ADVar<RealType, NumIndependents> ModifiedBessel0(const ADVar<RealType, NumIndependents> &x) {
-    ADVar<RealType, NumIndependents> y;
-
-    y.Value() = ModifiedBessel0(x.Value());
-
-    const RealType tmp = ModifiedBessel1(x.Value());
-
-    std::transform(x.Gradient().begin(), x.Gradient().end(), y.Gradient().begin(),
-      [&tmp](const RealType &dx) -> RealType {
-        return tmp*dx;
-      });
-
-    return y;
-  }
-
-  // From (6):
-  static RealType ModifiedBessel1(const RealType &x) {
-    // http://mathworld.wolfram.com/ChebyshevPolynomialoftheFirstKind.html
-    // T_1(x) = x and hence T_1(d/dx) = d/dx
-    // ModifiedBessel1(x) = d/dx ModifiedBessel0(x)
-
-    if (x == RealType(0))
-      return RealType(0);
-
-    // Let z = 1/4*x*x
-    const RealType z = x*x/RealType(4);
-    RealType term = RealType(1);
-    RealType sum = term; // First term is 0, second term is 1
-
-    for (unsigned int k = 2; k < MaxTerms; ++k) {
-      term *= z/RealType(k*(k-1));
-      sum += term;
-    }
-
-    sum *= x/RealType(2); // Chain rule x^2/4 --> x/2
-    
-    return sum;
-  }
-
-  // https://en.wikipedia.org/wiki/Rice_distribution
-  // From section "Moments"
-  static RealType HalfLaguerre(const RealType &x) {
-    return std::exp(x/RealType(2))*((RealType(1) - x)*ModifiedBessel0(-x/RealType(2)) - x*ModifiedBessel1(-x/RealType(2)));
-  }
-
-private:
-  RealType m_sigma;
-  RealType m_nu;
 };
 
 #endif // !RICIANNORMALIZATION_H
