@@ -263,6 +263,22 @@ void EncapsulateStringMetaData<itk::Point<double, 2>>(itk::MetaDataDictionary &c
 }
 
 template<>
+void EncapsulateStringMetaData<itk::Matrix<float, 3, 3>>(itk::MetaDataDictionary &clTags, const std::string &strKey, const itk::Matrix<float, 3, 3> &value) {
+  std::stringstream valueStream;
+  valueStream << value[0][0] << '\\' << value[1][0] << '\\' << value[2][0] << '\\' 
+    << value[0][1] << '\\' << value[1][1] << '\\' << value[2][1];
+  EncapsulateStringMetaData(clTags, strKey, valueStream.str());
+}
+
+template<>
+void EncapsulateStringMetaData<itk::Matrix<double, 3, 3>>(itk::MetaDataDictionary &clTags, const std::string &strKey, const itk::Matrix<double, 3, 3> &value) {
+  std::stringstream valueStream;
+  valueStream << value[0][0] << '\\' << value[1][0] << '\\' << value[2][0] << '\\' 
+    << value[0][1] << '\\' << value[1][1] << '\\' << value[2][1];
+  EncapsulateStringMetaData(clTags, strKey, valueStream.str());
+}
+
+template<>
 bool ExposeCSAMetaData<std::string>(gdcm::CSAHeader &clHeader, const std::string &strKey, std::string &strValue) {
   if (!clHeader.FindCSAElementByName(strKey.c_str()))
     return false;
@@ -1041,6 +1057,23 @@ void FindFolders(const char *p_cDir, const char *p_cPattern, std::vector<std::st
 }
 
 #endif // __unix__
+
+void FindDicomFiles(const char *p_cDir, const char *p_cPattern, std::vector<std::string> &vFiles, bool bRecursive) {
+  typedef itk::GDCMImageIO ImageIOType;
+
+  ImageIOType::Pointer p_clImageIO = ImageIOType::New();
+
+  std::vector<std::string> vTmpFiles;
+
+  FindFiles(p_cDir, p_cPattern, vTmpFiles, bRecursive);
+
+  vFiles.reserve(vTmpFiles.size());
+
+  for (std::string &strFile : vTmpFiles) {
+    if (p_clImageIO->CanReadFile(strFile.c_str()))
+      vFiles.emplace_back(std::move(strFile));
+  }
+}
 
 void FindDicomFolders(const char *p_cDir, const char *p_cPattern, std::vector<std::string> &vFolders, bool bRecursive) {
   typedef itk::GDCMImageIO ImageIOType;
