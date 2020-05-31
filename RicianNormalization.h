@@ -70,6 +70,15 @@ public:
     return x/sigma2 * exp(-(x*x + nu*nu)/(RealType(2)*sigma2)) * ModifiedBessel0(x*nu/sigma2);
   }
 
+  template<unsigned int NumIndependents>
+  static ADVar<RealType, NumIndependents> LogPdf(const ADVar<RealType, NumIndependents> &x, const ADVar<RealType, NumIndependents> &nu, const ADVar<RealType, NumIndependents> &sigma) {
+    if (x.Value() <= RealType(0))
+      return ADVar<RealType, NumIndependents>(RealType(0));
+
+    const ADVar<RealType, NumIndependents> sigma2 = sigma*sigma;
+    return log(x) - log(sigma2) - (x*x + nu*nu)/(RealType(2)*sigma2) + log(ModifiedBessel0(x*nu/sigma2));
+  }
+
   static RealType Mean(const RealType &nu, const RealType &sigma) {
     return sigma*std::sqrt(RealType(M_PI_2))*HalfLaguerre(-std::pow(nu/sigma, 2)/RealType(2));
   }
@@ -241,9 +250,12 @@ public:
     for (size_t i = 0; i < numPixels; ++i) {
       ADVarType clTmp((double)p_buffer[i]);
 
-      clTmp = RiceDistribution<double>::Pdf(clTmp, clNu, clSigma);
-      if (clTmp.Value() > 0.0) // The 0 pdf pixels wouldn't contribute to the optimization anyway (pdf derivative is 0)
-        clLoss -= log(clTmp);
+      clTmp = RiceDistribution<double>::LogPdf(clTmp, clNu, clSigma); // NOTE: 0 pixels will cause this function to return 0... but they wouldn't contribute anyway (pdf derivative is 0)
+      clLoss -= clTmp;
+
+      //clTmp = RiceDistribution<double>::Pdf(clTmp, clNu, clSigma);
+      //if (clTmp.Value() > 0.0) // The 0 pdf pixels wouldn't contribute to the optimization anyway (pdf derivative is 0)
+        //clLoss -= log(clTmp);
     }
 
     clLoss /= (double)numPixels;
