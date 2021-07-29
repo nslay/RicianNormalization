@@ -203,7 +203,7 @@ and then run "Configure" again. Then select "Generate." On Unix-like
 systems, you may additionally want to set CMAKE_BUILD_TYPE to "Release"
 
 NOTE: ITK_DIR should be set to the cmake folder in the ITK lib
-folder. For example: /path/to/ITK/lib/cmake/ITK-4.13/
+folder. For example: /path/to/ITK/lib/cmake/ITK-5.1/
 
 Visual Studio:
 - Open the solution in the build directory and build RicianNormalization.
@@ -215,9 +215,12 @@ Unix-like systems:
 RicianNormalization has been successfully built and tested with:
 Microsoft Visual Studio 2017 on Windows 10 Professional
 Clang 8.0.0 on FreeBSD 12.0-STABLE
+Microsoft Visual Studio 2019 on Windows 10 Professional
+GCC 9.2.0 on CentOS 7
 
 using ITK versions:
 ITK 4.13
+ITK 5.1
 
 #######################################################################
 # Caveats                                                             #

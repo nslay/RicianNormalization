@@ -35,6 +35,16 @@
 #include "itkGDCMImageIO.h"
 #include "itkGDCMSeriesFileNames.h"
 
+#if ITK_VERSION_MAJOR > 4
+using IOFileModeEnum = itk::IOFileModeEnum;
+using IOComponentEnum = itk::IOComponentEnum;
+using IOPixelEnum = itk::IOPixelEnum;
+#else // ITK_VERSION_MAJOR <= 4
+using IOFileModeEnum = itk::ImageIOFactory;
+using IOComponentEnum = itk::ImageIOBase;
+using IOPixelEnum = itk::ImageIOBase;
+#endif // ITK_VERSION_MAJOR > 4
+
 void Usage(const char *p_cArg0) {
   std::cerr << "Usage: " << p_cArg0 << " [-h] inputPath outputPath" << std::endl;
   exit(1);
@@ -126,7 +136,7 @@ bool NormalizeTemplate(const std::string &strImagePath, const std::string &strOu
 bool Normalize(const std::string &strImagePath, const std::string &strOutputPath) {
   itk::ImageIOBase::Pointer p_clImageIO;
   unsigned int uiDimension = 0;
-  itk::ImageIOBase::IOComponentType pixelComponent;
+  auto pixelComponent = IOComponentEnum::UNKNOWNCOMPONENTTYPE;
 
   if (IsFolder(strImagePath)) {
     // DICOM
@@ -163,7 +173,7 @@ bool Normalize(const std::string &strImagePath, const std::string &strOutputPath
     uiDimension = vFileNames.size() > 1 ? 3 : 2; // p_clDICOMImageIO->GetNumberOfDimensions() is probably 2
   }
   else {
-    p_clImageIO = itk::ImageIOFactory::CreateImageIO(strImagePath.c_str(), itk::ImageIOFactory::ReadMode);
+    p_clImageIO = itk::ImageIOFactory::CreateImageIO(strImagePath.c_str(), IOFileModeEnum::ReadMode);
 
     if (!p_clImageIO) {
       std::cerr << "Error: Could not determine ImageIO for file path '" << strImagePath << "'." << std::endl;
@@ -184,7 +194,7 @@ bool Normalize(const std::string &strImagePath, const std::string &strOutputPath
     uiDimension = p_clImageIO->GetNumberOfDimensions();
   }
 
-  if (p_clImageIO->GetNumberOfComponents() != 1 || p_clImageIO->GetPixelType() != itk::ImageIOBase::SCALAR) {
+  if (p_clImageIO->GetNumberOfComponents() != 1 || p_clImageIO->GetPixelType() != IOPixelEnum::SCALAR) {
     std::cerr << "Error: Cannot operate on images comprised of more than 1 pixel component." << std::endl;
     return false;
   }
@@ -192,17 +202,17 @@ bool Normalize(const std::string &strImagePath, const std::string &strOutputPath
   switch (uiDimension) {
   case 2:
     switch (pixelComponent) {
-    case itk::ImageIOBase::UCHAR:
+    case IOComponentEnum::UCHAR:
       return NormalizeTemplate<unsigned char, 2>(strImagePath, strOutputPath);
-    case itk::ImageIOBase::CHAR:
+    case IOComponentEnum::CHAR:
       return NormalizeTemplate<char, 2>(strImagePath, strOutputPath);
-    case itk::ImageIOBase::USHORT:
+    case IOComponentEnum::USHORT:
       return NormalizeTemplate<unsigned short, 2>(strImagePath, strOutputPath);
-    case itk::ImageIOBase::SHORT:
+    case IOComponentEnum::SHORT:
       return NormalizeTemplate<short, 2>(strImagePath, strOutputPath);
-    case itk::ImageIOBase::FLOAT:
+    case IOComponentEnum::FLOAT:
       return NormalizeTemplate<float, 2>(strImagePath, strOutputPath);
-    case itk::ImageIOBase::DOUBLE:
+    case IOComponentEnum::DOUBLE:
       return NormalizeTemplate<double, 2>(strImagePath, strOutputPath);
     default:
       std::cerr << "Error: Unsupported pixel type: " << (int)pixelComponent << '.' << std::endl;
@@ -211,17 +221,17 @@ bool Normalize(const std::string &strImagePath, const std::string &strOutputPath
     break;
   case 3:
     switch (pixelComponent) {
-    case itk::ImageIOBase::UCHAR:
+    case IOComponentEnum::UCHAR:
       return NormalizeTemplate<unsigned char, 3>(strImagePath, strOutputPath);
-    case itk::ImageIOBase::CHAR:
+    case IOComponentEnum::CHAR:
       return NormalizeTemplate<char, 3>(strImagePath, strOutputPath);
-    case itk::ImageIOBase::USHORT:
+    case IOComponentEnum::USHORT:
       return NormalizeTemplate<unsigned short, 3>(strImagePath, strOutputPath);
-    case itk::ImageIOBase::SHORT:
+    case IOComponentEnum::SHORT:
       return NormalizeTemplate<short, 3>(strImagePath, strOutputPath);
-    case itk::ImageIOBase::FLOAT:
+    case IOComponentEnum::FLOAT:
       return NormalizeTemplate<float, 3>(strImagePath, strOutputPath);
-    case itk::ImageIOBase::DOUBLE:
+    case IOComponentEnum::DOUBLE:
       return NormalizeTemplate<double, 3>(strImagePath, strOutputPath);
     default:
       std::cerr << "Error: Unsupported pixel type: " << (int)pixelComponent << '.' << std::endl;
