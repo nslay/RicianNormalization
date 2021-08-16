@@ -125,6 +125,11 @@ bool NormalizeTemplate(const std::string &strImagePath, const std::string &strOu
 
     std::cout << "Info: Saving DICOM series to '" << strOutputPath << "' ..." << std::endl;
 
+    // XXX: Prevent ITK from inverting a transform when saving... potentially causing loss of information in pixel intensity!
+    EncapsulateStringMetaData(p_clImage->GetMetaDataDictionary(), "0028|1052", 0.0); // Intercept
+    EncapsulateStringMetaData(p_clImage->GetMetaDataDictionary(), "0028|1053", 1.0); // Slope
+    EncapsulateStringMetaData(p_clImage->GetMetaDataDictionary(), "0028|1054", std::string("US")); // US - "Unspecified"
+
     return SaveDicomImage(p_clImage.GetPointer(), strOutputPath);
   }
 
