@@ -173,10 +173,13 @@ the output is a folder and write a DICOM series (and create the folder
 automatically).
 
 Lastly, RicianNormalization provides the below usage message when
-provided with the -h flag or no arguments. It has no additional
-options yet.
+provided with the -h flag or no arguments.
 
-Usage: RicianNormalization [-h] inputPath outputPath
+Usage: RicianNormalization [-hC] inputPath outputPath
+
+Options:
+-h -- This help message.
+-C -- Clamp image so that it is non-negative.
 
 #######################################################################
 # Building from Source                                                #

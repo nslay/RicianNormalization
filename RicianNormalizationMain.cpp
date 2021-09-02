@@ -32,6 +32,7 @@
 #include "bsdgetopt.h"
 
 #include "itkImageIOFactory.h"
+#include "itkClampImageFilter.h"
 #include "itkGDCMImageIO.h"
 #include "itkGDCMSeriesFileNames.h"
 
@@ -46,23 +47,30 @@ using IOPixelEnum = itk::ImageIOBase;
 #endif // ITK_VERSION_MAJOR > 4
 
 void Usage(const char *p_cArg0) {
-  std::cerr << "Usage: " << p_cArg0 << " [-h] inputPath outputPath" << std::endl;
+  std::cerr << "Usage: " << p_cArg0 << " [-hC] inputPath outputPath" << std::endl;
+  std::cerr << "\nOptions:" << std::endl;
+  std::cerr << "-h -- This help message." << std::endl;
+  std::cerr << "-C -- Clamp image so that it is non-negative." << std::endl;
   exit(1);
 }
 
 template<typename PixelType, unsigned int Dimension>
-bool NormalizeTemplate(const std::string &strImagePath, const std::string &strOutputPath);
+bool NormalizeTemplate(const std::string &strImagePath, const std::string &strOutputPath, bool bClampImage);
 
-bool Normalize(const std::string &strImagePath, const std::string &strOutputPath);
+bool Normalize(const std::string &strImagePath, const std::string &strOutputPath, bool bClampImage);
 
 int main(int argc, char **argv) {
   const char * const p_cArg0 = argv[0];
+  bool bClampImage = false;
 
   int c = 0;
-  while ((c = getopt(argc, argv, "h")) != -1) {
+  while ((c = getopt(argc, argv, "hC")) != -1) {
     switch (c) {
       case 'h':
         Usage(p_cArg0);
+        break;
+      case 'C':
+        bClampImage = true;
         break;
       case '?':
       default:
@@ -77,7 +85,7 @@ int main(int argc, char **argv) {
   if (argc != 2)
     Usage(p_cArg0);
 
-  if (!Normalize(argv[0], argv[1])) {
+  if (!Normalize(argv[0], argv[1], bClampImage)) {
     std::cerr << "Error: Failed to normalize image." << std::endl;
     return -1;
   }
@@ -86,7 +94,7 @@ int main(int argc, char **argv) {
 }
 
 template<typename PixelType, unsigned int Dimension>
-bool NormalizeTemplate(const std::string &strImagePath, const std::string &strOutputPath) {
+bool NormalizeTemplate(const std::string &strImagePath, const std::string &strOutputPath, bool bClampImage) {
   typedef itk::Image<PixelType, Dimension> ImageType;
 
   typename ImageType::Pointer p_clImage;
@@ -109,6 +117,21 @@ bool NormalizeTemplate(const std::string &strImagePath, const std::string &strOu
   if (!p_clImage) {
     std::cerr << "Error: Failed to load image '" << strImagePath << "'." << std::endl;
     return false;
+  }
+
+  if (bClampImage) {
+    typedef itk::ClampImageFilter<ImageType, ImageType> ClampImageType;
+
+    std::cout << "Info: Clamping image to be non-negative." << std::endl;
+
+    typename ClampImageType::Pointer p_clClampImage = ClampImageType::New();
+
+    p_clClampImage->SetBounds(PixelType(0), std::numeric_limits<PixelType>::max());
+    p_clClampImage->SetInput(p_clImage);
+
+    p_clClampImage->Update();
+
+    p_clImage = p_clClampImage->GetOutput();
   }
 
   RicianNormalization<ImageType> clNormalizer;
@@ -138,7 +161,7 @@ bool NormalizeTemplate(const std::string &strImagePath, const std::string &strOu
   return SaveImg(p_clImage.GetPointer(), strOutputPath);
 }
 
-bool Normalize(const std::string &strImagePath, const std::string &strOutputPath) {
+bool Normalize(const std::string &strImagePath, const std::string &strOutputPath, bool bClampImage) {
   itk::ImageIOBase::Pointer p_clImageIO;
   unsigned int uiDimension = 0;
   auto pixelComponent = IOComponentEnum::UNKNOWNCOMPONENTTYPE;
@@ -208,17 +231,17 @@ bool Normalize(const std::string &strImagePath, const std::string &strOutputPath
   case 2:
     switch (pixelComponent) {
     case IOComponentEnum::UCHAR:
-      return NormalizeTemplate<unsigned char, 2>(strImagePath, strOutputPath);
+      return NormalizeTemplate<unsigned char, 2>(strImagePath, strOutputPath, bClampImage);
     case IOComponentEnum::CHAR:
-      return NormalizeTemplate<char, 2>(strImagePath, strOutputPath);
+      return NormalizeTemplate<char, 2>(strImagePath, strOutputPath, bClampImage);
     case IOComponentEnum::USHORT:
-      return NormalizeTemplate<unsigned short, 2>(strImagePath, strOutputPath);
+      return NormalizeTemplate<unsigned short, 2>(strImagePath, strOutputPath, bClampImage);
     case IOComponentEnum::SHORT:
-      return NormalizeTemplate<short, 2>(strImagePath, strOutputPath);
+      return NormalizeTemplate<short, 2>(strImagePath, strOutputPath, bClampImage);
     case IOComponentEnum::FLOAT:
-      return NormalizeTemplate<float, 2>(strImagePath, strOutputPath);
+      return NormalizeTemplate<float, 2>(strImagePath, strOutputPath, bClampImage);
     case IOComponentEnum::DOUBLE:
-      return NormalizeTemplate<double, 2>(strImagePath, strOutputPath);
+      return NormalizeTemplate<double, 2>(strImagePath, strOutputPath, bClampImage);
     default:
       std::cerr << "Error: Unsupported pixel type: " << (int)pixelComponent << '.' << std::endl;
       return false;
@@ -227,17 +250,17 @@ bool Normalize(const std::string &strImagePath, const std::string &strOutputPath
   case 3:
     switch (pixelComponent) {
     case IOComponentEnum::UCHAR:
-      return NormalizeTemplate<unsigned char, 3>(strImagePath, strOutputPath);
+      return NormalizeTemplate<unsigned char, 3>(strImagePath, strOutputPath, bClampImage);
     case IOComponentEnum::CHAR:
-      return NormalizeTemplate<char, 3>(strImagePath, strOutputPath);
+      return NormalizeTemplate<char, 3>(strImagePath, strOutputPath, bClampImage);
     case IOComponentEnum::USHORT:
-      return NormalizeTemplate<unsigned short, 3>(strImagePath, strOutputPath);
+      return NormalizeTemplate<unsigned short, 3>(strImagePath, strOutputPath, bClampImage);
     case IOComponentEnum::SHORT:
-      return NormalizeTemplate<short, 3>(strImagePath, strOutputPath);
+      return NormalizeTemplate<short, 3>(strImagePath, strOutputPath, bClampImage);
     case IOComponentEnum::FLOAT:
-      return NormalizeTemplate<float, 3>(strImagePath, strOutputPath);
+      return NormalizeTemplate<float, 3>(strImagePath, strOutputPath, bClampImage);
     case IOComponentEnum::DOUBLE:
-      return NormalizeTemplate<double, 3>(strImagePath, strOutputPath);
+      return NormalizeTemplate<double, 3>(strImagePath, strOutputPath, bClampImage);
     default:
       std::cerr << "Error: Unsupported pixel type: " << (int)pixelComponent << '.' << std::endl;
       return false;

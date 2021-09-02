@@ -319,8 +319,10 @@ private:
     for (size_t i = 0; i < numPixels; ++i) {
       const double value = (double)p_buffer[i];
 
-      if (value < 0.0) // Not Rice distribution
+      if (value < 0.0) { // Not Rice distribution
+        std::cerr << "Error: Negative pixel value implies not Rice distributed (clamp with -C)." << std::endl;
         return vnl_vector<double>();
+      }
 
       double delta = value - u1;
       u1 += delta/(i+1.0);
