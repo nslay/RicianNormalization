@@ -26,6 +26,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <type_traits>
+#include <limits>
 #include "Common.h"
 #include "RicianNormalization.h"
 
